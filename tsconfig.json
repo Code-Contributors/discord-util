@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "target": "ESNext",
+      "module": "CommonJS",
+      "rootDir": "./main",
+      "outDir": "./src",
+      "declaration": true,
+      "declarationDir": "./typings"
+    },
+    "include": ["main/**/*.ts"],
+    "exclude": ["node_modules"]
+  }
+  
