@@ -1,6 +1,6 @@
 {
   "name": "discord-utilies",
-  "version": "1.2.7",
+  "version": "2.0.0",
   "description": "discord-utilies is a powerful NPM package with various utility features for your Discord Bot ",
   "main": "./src/index.js",
   "types": "./typings/index.d.ts",
