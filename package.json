@@ -1,6 +1,6 @@
 {
   "name": "discord-utilies",
-  "version": "1.0.5",
+  "version": "1.2.7",
   "description": "discord-utilies is a powerful NPM package with various utility features for your Discord Bot ",
   "main": "./src/index.js",
   "types": "./typings/index.d.ts",
@@ -17,23 +17,32 @@
     "Code Contributors (CC Studios)"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "changelog": "CHANGELOG.md"
   },
   "keywords": [
     "discord",
     "games",
-    "utiliy"
+    "utiliy",
+    "leveling"
   ],
+  "repository": {
+    "url": "https://github.com/Code-Contributors/discord-util"
+  },
   "author": "verleihernix",
   "license": "MIT",
   "dependencies": {
+    "array-shuffle": "^3.0.0",
+    "discord.js": "^14.13.0",
     "events": "^3.3.0",
     "html-entities": "^2.4.0",
-    "discord.js": "^14.13.0"
+    "rotate-matrix": "^0.0.3"
   },
   "devDependencies": {
-    "diswrap": "^1.3.6",
     "@types/node": "^20.8.7",
     "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=16.11.0"
   }
 }
