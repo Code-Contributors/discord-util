@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EasyBot = exports.EasyBotEmitter = exports.easybotemitter = exports.LevelSystem = exports.LevelXPManager = exports.TotalLevelXPManager = exports.LevelSettingsManager = exports.LevelUtilsManager = exports.LevelRanksManager = exports.LevelManager = exports.LevelDatabaseManager = exports.LevelDotParser = exports.LevelFetchManager = exports.LevelingErros = exports.LevelSettingsArray = exports.LevelDefaultOptions = exports.LevelDefaultObject = exports.LevelingError = exports.LevelEmitter = exports.levelemitter = exports.CustomLogger = exports.ErrorHandler = exports.CogManager = exports.reply = exports.DataBaseManager = exports.DiscordDataBase = exports.SlashCommandLoader = exports.SlashCommandOptionTypes = exports.MemoryGame = exports.Approve = exports.shuffleArray = exports.getAlphaEmoji = exports.oppDirection = exports.move = exports.decode = exports.formatMessage = exports.getNumEmoji = exports.disableButtons = exports.BBuilder = exports.Intents = exports.Msg = void 0;
+exports.CogManager = exports.EasyBot = exports.EasyBotEmitter = exports.easybotemitter = exports.LevelSystem = exports.LevelXPManager = exports.TotalLevelXPManager = exports.LevelSettingsManager = exports.LevelUtilsManager = exports.LevelRanksManager = exports.LevelManager = exports.LevelDatabaseManager = exports.LevelDotParser = exports.LevelFetchManager = exports.LevelingErros = exports.LevelSettingsArray = exports.LevelDefaultOptions = exports.LevelDefaultObject = exports.LevelingError = exports.LevelEmitter = exports.levelemitter = exports.CustomLogger = exports.ErrorHandler = exports.reply = exports.DataBaseManager = exports.DiscordDataBase = exports.SlashCommandLoader = exports.SlashCommandOptionTypes = exports.MemoryGame = exports.Approve = exports.shuffleArray = exports.getAlphaEmoji = exports.oppDirection = exports.move = exports.decode = exports.formatMessage = exports.getNumEmoji = exports.disableButtons = exports.BBuilder = exports.Intents = exports.Msg = void 0;
 const discord_js_1 = require("discord.js");
 Object.defineProperty(exports, "Intents", { enumerable: true, get: function () { return discord_js_1.GatewayIntentBits; } });
 const events_1 = require("events");
@@ -767,66 +767,6 @@ async function reply(options) {
     console.log(options.message, options.interaction.user.id);
 }
 exports.reply = reply;
-/**
- * A class for loading and managing Cogs.
- */
-class CogManager {
-    client;
-    cogs;
-    /**
-     * Creates a new instance of the `CogManager`
-     * @param client - The Discord Bot Client
-     */
-    constructor(client) {
-        this.client = client;
-        this.cogs = new Map();
-    }
-    /**
-     * Loads a Cog into the `CogManager`
-     * @param cog - The Cog to be loaded
-     */
-    loadCog(cog) {
-        const instance = new cog(this.client);
-        this.cogs.set(cog.name, instance);
-        console.log(`Cog loaded: ${cog.name}`);
-    }
-    /**
-     * Unloads a Cog from the `CogManager`
-     * @param cogName - The Name of the Cog to be unloaded
-     */
-    unloadCog(cogName) {
-        if (this.cogs.has(cogName)) {
-            this.cogs.get(cogName).unload();
-            this.cogs.delete(cogName);
-            console.log(`Cog unloaded: ${cogName}`);
-        }
-        else {
-            console.log(`Cog not found with Name ${cogName}`);
-        }
-    }
-    /**
-     * Calls a method in a Cog.
-     * @param cogName - The name of the Cog that has the method.
-     * @param methodName - The name of the method to be called.
-     * @param args - The arguments for the method.
-     * @returns The result of the method.
-     */
-    callCogMethod(cogName, methodName, ...args) {
-        if (this.cogs.has(cogName)) {
-            const cogInstance = this.cogs.get(cogName);
-            if (cogInstance[methodName] && typeof cogInstance[methodName] === 'function') {
-                return cogInstance[methodName](...args);
-            }
-            else {
-                console.log(`Method not found: ${methodName} in Cog: ${cogName}`);
-            }
-        }
-        else {
-            console.log(`Cog not found: ${cogName}`);
-        }
-    }
-}
-exports.CogManager = CogManager;
 /**
  * The `ErrorHandler` Class.
  * This class provides methods for handling and reporting errors.
@@ -2909,3 +2849,139 @@ class EasyBot extends EasyBotEmitter {
     }
 }
 exports.EasyBot = EasyBot;
+/**
+ * The `CogManager` Class allows you to manage Cogs in a discord bot.
+ * @example
+ * const client = new Client();
+ * const cogLoader = new CogLoader(client);
+ *
+ * cogLoader.on('addCog', (cog) => {
+ *    console.log(`${cog.cogName} in ${cog.cogFolder} was loaded`);
+ * });
+ *
+ * client.once('ready', () => {
+ *    console.log('Ready');
+ * });
+ *
+ * client.login('TOKEN');
+ */
+class CogManager {
+    /**
+     * The Cog EventEmitter
+     */
+    eventEmitter;
+    /**
+     * The Discord Bot (Client)
+     */
+    client;
+    /**
+     * The Cogs
+     */
+    cogs;
+    /**
+     * Creates a new Instance of the `CogLoader`
+     * @param {Client} client - The Discord Bot Client
+     */
+    constructor(client) {
+        this.eventEmitter = new events_1.EventEmitter();
+        this.client = client;
+        this.cogs = new Map();
+    }
+    /**
+     *
+     * @param {Object} cog - Cog Information, including name and folder
+     * @param {string} code - The JavaScript Code of the Cog
+     * @example
+     * cogLoader.addCog({ cogName: 'MyCog', cogFolder: './cogs' }, '...');
+     */
+    addCog(cog, code) {
+        this.cogs.set(cog.cogName, code);
+        this.eventEmitter.emit('cogAdded', cog);
+    }
+    /**
+     * Removes a Cog
+     * @param {string} cogName - The Name of the Cog to remove
+     * @example
+     * cogLoader.removeCog('MyCog');
+    */
+    removeCog(cogName) {
+        this.cogs.delete(cogName);
+        this.eventEmitter.emit('cogRemoved', cogName);
+    }
+    /**
+     * Execute (Runs) a Cog
+     * @param {string} cogName - The Name of the Cog to execute
+     * @param {any} trigger - The Trigger that triggers the Cog (like 'message', or 'interaction')
+     * @example
+     * cogLoader.executeCog('MyCog', message);
+     */
+    executeCog(cogName, trigger) {
+        if (this.cogs.has(cogName)) {
+            try {
+                const code = this.cogs.get(cogName);
+                eval(code);
+                this.eventEmitter.emit('cogExecuted', cogName);
+            }
+            catch (error) {
+                this.eventEmitter.emit('cogError', { cogName, error });
+            }
+        }
+    }
+    /**
+    * Loads a Cog from a file.
+    * @param {Object} cog - Cog information, including name and folder.
+    * @param {string} filePath - The path to the Cog file.
+    * @example
+    * cogLoader.loadCogFromFile({ cogName: 'MyCog', cogFolder: 'Cogs' }, 'cog1.js');
+     */
+    loadCogFromFile(cog, filePath) {
+        fs.readFile(filePath, 'utf-8', (err, data) => {
+            if (err) {
+                this.eventEmitter.emit('cogLoadError', err);
+            }
+            else {
+                this.addCog(cog, data);
+                this.eventEmitter.emit('cogLoaded', cog);
+            }
+        });
+    }
+    /**
+    * Loads all Cog files from a folder.
+    * @param {string} cogFolder - The folder where Cog files are stored.
+    * @example
+    * cogLoader.loadCogsFromFolder('Cogs');
+     */
+    loadCogsFromFolder(cogFolder) {
+        fs.readdir(cogFolder, (err, files) => {
+            if (err) {
+                this.eventEmitter.emit('cogLoadError', err);
+            }
+            else {
+                files.forEach((file) => {
+                    if (file.endsWith('.js' || '.ts')) {
+                        const filePath = `${cogFolder}/${file}`;
+                        const cog = { cogName: file, cogFolder };
+                        this.loadCogFromFile(cog, filePath);
+                    }
+                });
+            }
+        });
+    }
+    /**
+     * Adds a one-time event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    once(event, listener) {
+        this.eventEmitter.once(event, listener);
+    }
+    /**
+     * Adds an event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    on(event, listener) {
+        this.eventEmitter.on(event, listener);
+    }
+}
+exports.CogManager = CogManager;
