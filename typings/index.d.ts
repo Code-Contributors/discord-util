@@ -479,36 +479,6 @@ export interface ReplyOptions {
  */
 export declare function reply(options: ReplyOptions): Promise<void>;
 /**
- * A class for loading and managing Cogs.
- */
-export declare class CogManager {
-    private client;
-    private cogs;
-    /**
-     * Creates a new instance of the `CogManager`
-     * @param client - The Discord Bot Client
-     */
-    constructor(client: Client);
-    /**
-     * Loads a Cog into the `CogManager`
-     * @param cog - The Cog to be loaded
-     */
-    loadCog(cog: any): void;
-    /**
-     * Unloads a Cog from the `CogManager`
-     * @param cogName - The Name of the Cog to be unloaded
-     */
-    unloadCog(cogName: string): void;
-    /**
-     * Calls a method in a Cog.
-     * @param cogName - The name of the Cog that has the method.
-     * @param methodName - The name of the method to be called.
-     * @param args - The arguments for the method.
-     * @returns The result of the method.
-     */
-    callCogMethod(cogName: string, methodName: string, ...args: any[]): any;
-}
-/**
  * The `ErrorHandler` Class.
  * This class provides methods for handling and reporting errors.
  */
@@ -664,6 +634,26 @@ export interface LevelUserData {
      * User's discriminator
      */
     discriminator: string;
+}
+/**
+ * The Cog Events
+ */
+export interface CogEvents {
+    cogAdded: (cog: {
+        cogName: string;
+        cogFolder: string;
+    }) => void;
+    cogRemoved: (cogName: string) => void;
+    cogExecuted: (cogName: string) => void;
+    cogError: (cog: {
+        cogName: string;
+        error: Error;
+    }) => void;
+    cogLoadError: (error: Error) => void;
+    cogLoaded: (cog: {
+        cogName: string;
+        cogFolder: string;
+    }) => void;
 }
 export interface LevelData {
     /**
@@ -1945,4 +1935,95 @@ export declare class EasyBot extends EasyBotEmitter {
         presence?: PresenceData | undefined;
     }): void;
     run(token: string): void;
+}
+/**
+ * The `CogManager` Class allows you to manage Cogs in a discord bot.
+ * @example
+ * const client = new Client();
+ * const cogLoader = new CogLoader(client);
+ *
+ * cogLoader.on('addCog', (cog) => {
+ *    console.log(`${cog.cogName} in ${cog.cogFolder} was loaded`);
+ * });
+ *
+ * client.once('ready', () => {
+ *    console.log('Ready');
+ * });
+ *
+ * client.login('TOKEN');
+ */
+export declare class CogManager {
+    /**
+     * The Cog EventEmitter
+     */
+    private eventEmitter;
+    /**
+     * The Discord Bot (Client)
+     */
+    private client;
+    /**
+     * The Cogs
+     */
+    cogs: Map<string, string>;
+    /**
+     * Creates a new Instance of the `CogLoader`
+     * @param {Client} client - The Discord Bot Client
+     */
+    constructor(client: Client);
+    /**
+     *
+     * @param {Object} cog - Cog Information, including name and folder
+     * @param {string} code - The JavaScript Code of the Cog
+     * @example
+     * cogLoader.addCog({ cogName: 'MyCog', cogFolder: './cogs' }, '...');
+     */
+    addCog(cog: {
+        cogName: string;
+        cogFolder: string;
+    }, code: string): void;
+    /**
+     * Removes a Cog
+     * @param {string} cogName - The Name of the Cog to remove
+     * @example
+     * cogLoader.removeCog('MyCog');
+    */
+    removeCog(cogName: string): void;
+    /**
+     * Execute (Runs) a Cog
+     * @param {string} cogName - The Name of the Cog to execute
+     * @param {any} trigger - The Trigger that triggers the Cog (like 'message', or 'interaction')
+     * @example
+     * cogLoader.executeCog('MyCog', message);
+     */
+    executeCog(cogName: string, trigger: any): void;
+    /**
+    * Loads a Cog from a file.
+    * @param {Object} cog - Cog information, including name and folder.
+    * @param {string} filePath - The path to the Cog file.
+    * @example
+    * cogLoader.loadCogFromFile({ cogName: 'MyCog', cogFolder: 'Cogs' }, 'cog1.js');
+     */
+    loadCogFromFile(cog: {
+        cogName: string;
+        cogFolder: string;
+    }, filePath: string): void;
+    /**
+    * Loads all Cog files from a folder.
+    * @param {string} cogFolder - The folder where Cog files are stored.
+    * @example
+    * cogLoader.loadCogsFromFolder('Cogs');
+     */
+    loadCogsFromFolder(cogFolder: string): void;
+    /**
+     * Adds a one-time event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    once<K extends keyof CogEvents>(event: K, listener: CogEvents[K]): void;
+    /**
+     * Adds an event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    on<K extends keyof CogEvents>(event: K, listener: CogEvents[K]): void;
 }
