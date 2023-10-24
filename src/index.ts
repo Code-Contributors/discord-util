@@ -807,62 +807,6 @@ export async function reply(options: ReplyOptions) {
     console.log(options.message, options.interaction.user.id);
 }
 /**
- * A class for loading and managing Cogs.
- */
-export class CogManager {
-    private client: Client;
-    private cogs: Map<string, any>;
-    /**
-     * Creates a new instance of the `CogManager`
-     * @param client - The Discord Bot Client
-     */
-    constructor(client: Client) {
-        this.client = client;
-        this.cogs = new Map();
-    }
-    /**
-     * Loads a Cog into the `CogManager`
-     * @param cog - The Cog to be loaded
-     */
-    public loadCog(cog: any) {
-        const instance = new cog(this.client);
-        this.cogs.set(cog.name, instance);
-        console.log(`Cog loaded: ${cog.name}`);
-    }
-    /**
-     * Unloads a Cog from the `CogManager`
-     * @param cogName - The Name of the Cog to be unloaded
-     */
-    public unloadCog(cogName: string) {
-        if (this.cogs.has(cogName)) {
-            this.cogs.get(cogName).unload();
-            this.cogs.delete(cogName);
-            console.log(`Cog unloaded: ${cogName}`);
-        } else {
-            console.log(`Cog not found with Name ${cogName}`);
-        }
-    }
-    /**
-     * Calls a method in a Cog.
-     * @param cogName - The name of the Cog that has the method.
-     * @param methodName - The name of the method to be called.
-     * @param args - The arguments for the method.
-     * @returns The result of the method.
-     */
-    public callCogMethod(cogName: string, methodName: string, ...args: any[]) {
-        if (this.cogs.has(cogName)) {
-            const cogInstance = this.cogs.get(cogName);
-            if (cogInstance[methodName] && typeof cogInstance[methodName] === 'function') {
-                return cogInstance[methodName](...args);
-            } else {
-                console.log(`Method not found: ${methodName} in Cog: ${cogName}`);
-            }
-        } else {
-            console.log(`Cog not found: ${cogName}`);
-        }
-    }
-}
-/**
  * The `ErrorHandler` Class.
  * This class provides methods for handling and reporting errors.
  */
@@ -1041,7 +985,17 @@ export interface LevelUserData {
      */
     discriminator: string;
 }
-
+/**
+ * The Cog Events
+ */
+export interface CogEvents {
+    cogAdded: (cog: { cogName: string; cogFolder: string }) => void;
+    cogRemoved: (cogName: string) => void;
+    cogExecuted: (cogName: string) => void;
+    cogError: (cog: { cogName: string; error: Error }) => void;
+    cogLoadError: (error: Error) => void;
+    cogLoaded: (cog: { cogName: string; cogFolder: string }) => void;
+}
 export interface LevelData {
      /**
      * Guild ID.
@@ -3572,5 +3526,143 @@ export class EasyBot extends EasyBotEmitter {
     run(token: string) {
         if (!token) throw new TypeError('INVALID_TOKEN: You must set an valid Token to the Bot')
         this.client.login(token);
+    }
+}
+/**
+ * The `CogManager` Class allows you to manage Cogs in a discord bot.
+ * @example
+ * const client = new Client();
+ * const cogLoader = new CogLoader(client);
+ * 
+ * cogLoader.on('addCog', (cog) => {
+ *    console.log(`${cog.cogName} in ${cog.cogFolder} was loaded`);
+ * });
+ * 
+ * client.once('ready', () => {
+ *    console.log('Ready');
+ * });
+ * 
+ * client.login('TOKEN');
+ */
+export class CogManager {
+    /**
+     * The Cog EventEmitter
+     */
+    private eventEmitter: EventEmitter;
+    /**
+     * The Discord Bot (Client)
+     */
+    private client: Client;
+    /**
+     * The Cogs
+     */
+    public cogs: Map<string, string>;
+    /**
+     * Creates a new Instance of the `CogLoader`
+     * @param {Client} client - The Discord Bot Client
+     */
+    constructor(client: Client) {
+        this.eventEmitter = new EventEmitter();
+        this.client = client;
+        this.cogs = new Map();
+    }
+    /**
+     * 
+     * @param {Object} cog - Cog Information, including name and folder
+     * @param {string} code - The JavaScript Code of the Cog
+     * @example
+     * cogLoader.addCog({ cogName: 'MyCog', cogFolder: './cogs' }, '...'); 
+     */
+    addCog(cog: { cogName: string; cogFolder: string }, code: string) {
+        this.cogs.set(cog.cogName, code);
+        this.eventEmitter.emit('cogAdded', cog);
+    }
+    /**
+     * Removes a Cog
+     * @param {string} cogName - The Name of the Cog to remove
+     * @example
+     * cogLoader.removeCog('MyCog');
+    */
+    removeCog(cogName: string) {
+        this.cogs.delete(cogName);
+        this.eventEmitter.emit('cogRemoved', cogName);
+    }
+    /**
+     * Execute (Runs) a Cog
+     * @param {string} cogName - The Name of the Cog to execute 
+     * @param {any} trigger - The Trigger that triggers the Cog (like 'message', or 'interaction')
+     * @example
+     * cogLoader.executeCog('MyCog', message);
+     */
+    executeCog(cogName: string, trigger: any) {
+        if (this.cogs.has(cogName)) {
+            try {
+                const code = this.cogs.get(cogName);
+                eval(code);
+                this.eventEmitter.emit('cogExecuted', cogName);
+            } catch (error) {
+                this.eventEmitter.emit('cogError', { cogName, error });
+            }
+        }
+    }
+    /**
+    * Loads a Cog from a file.
+    * @param {Object} cog - Cog information, including name and folder.
+    * @param {string} filePath - The path to the Cog file.
+    * @example
+    * cogLoader.loadCogFromFile({ cogName: 'MyCog', cogFolder: 'Cogs' }, 'cog1.js');
+     */
+    loadCogFromFile(cog: { cogName: string; cogFolder: string }, filePath: string) {
+        fs.readFile(filePath, 'utf-8', (err, data) => {
+            if (err) {
+                this.eventEmitter.emit('cogLoadError', err);
+            } else {
+                this.addCog(cog, data);
+                this.eventEmitter.emit('cogLoaded', cog);
+            }
+        });
+    }
+    /**
+    * Loads all Cog files from a folder.
+    * @param {string} cogFolder - The folder where Cog files are stored.
+    * @example
+    * cogLoader.loadCogsFromFolder('Cogs');
+     */
+    loadCogsFromFolder(cogFolder: string) {
+        fs.readdir(cogFolder, (err, files) => {
+            if (err) {
+                this.eventEmitter.emit('cogLoadError', err);
+            } else {
+                files.forEach((file) => {
+                    if (file.endsWith('.js' || '.ts')) {
+                        const filePath = `${cogFolder}/${file}`;
+                        const cog = { cogName: file, cogFolder };
+                        this.loadCogFromFile(cog, filePath);
+                    }
+                });
+            }
+        });
+    }
+    /**
+     * Adds a one-time event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    once<K extends keyof CogEvents>(
+        event: K,
+        listener: CogEvents[K]
+    ) {
+        this.eventEmitter.once(event, listener);
+    }
+    /**
+     * Adds an event listener.
+    * @param {string} event - The name of the event.
+    * @param {Function} listener - The function to handle the event.
+     */
+    on<K extends keyof CogEvents>(
+        event: K,
+        listener: CogEvents[K]
+    ) {
+        this.eventEmitter.on(event, listener);
     }
 }
